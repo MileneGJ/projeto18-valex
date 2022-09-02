@@ -13,7 +13,8 @@ export async function createCard (req:Request,res:Response) {
 }
 
 export async function createPassword (req:Request, res:Response) {
-    await cardService.activateCard(req.body.cardId,req.body.securityCode,req.body.password)
+    const {cardId} = req.params
+    await cardService.activateCard(Number(cardId),req.body.securityCode,req.body.password)
     res.sendStatus(200)
 }
 
@@ -22,4 +23,16 @@ export async function getBalance (req:Request, res:Response) {
     await cardService.cardExistsVerify(Number(cardId))
     const balance = await paymentService.getBalance(Number(cardId))
     res.status(200).send(balance)
+}
+
+export async function blockCard (req: Request, res: Response) {
+    const {cardId} = req.params
+    await cardService.blockCard(Number(cardId),req.body.password)
+    res.sendStatus(200)
+}
+
+export async function unblockCard (req: Request, res: Response) {
+    const {cardId} = req.params
+    await cardService.unblockCard(Number(cardId),req.body.password)
+    res.sendStatus(200)
 }

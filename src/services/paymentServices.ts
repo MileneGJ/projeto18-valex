@@ -2,7 +2,7 @@ import * as paymentRepository from '../repositories/paymentRepository'
 import * as rechargeRepository from '../repositories/rechargeRepository'
 
 
-export async function getBalance(cardId: number) {
+export async function getBalance(cardId: number):Promise<any> {
     const transactions = await paymentRepository.findByCardId(cardId)
     const recharges = await rechargeRepository.findByCardId(cardId)
     const sumPayments = getSum(transactions)
@@ -14,7 +14,7 @@ export async function getBalance(cardId: number) {
     })
 }
 
-function getSum(arr: Array<any>) {
+function getSum(arr: Array<any>):number {
     let sum = 0
     if (arr.length > 0) {
         arr.map((x: any) => sum += x.amount)

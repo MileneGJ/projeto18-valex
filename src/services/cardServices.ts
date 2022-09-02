@@ -11,7 +11,8 @@ export async function createNewCard(employeeId: number, employeeName: string, ty
     const cardholderName = formatName(employeeName)
     const expirationDate = createExpDate()
     const number = faker.finance.creditCardNumber()
-    const securityCode = getEncryptedCode()
+    const rawSecurityCode = faker.finance.creditCardCVV()
+    const securityCode = cryptString(rawSecurityCode, 'encrypt')
 
     const cardData: cardRepository.CardInsertData = {
         employeeId,
@@ -46,16 +47,28 @@ function createExpDate(): string {
     return now.add(5, 'years').format('MM/YY')
 }
 
-function getEncryptedCode(): string {
-    const secretCode = faker.finance.creditCardCVV()
-    console.log(secretCode)
+function cryptString(str: string, method: string): string {
     const CRYPTR_KEY = process.env.CRYPTR_KEY || 'secret'
     const cryptr = new Cryptr(CRYPTR_KEY)
-    return cryptr.encrypt(secretCode)
+    switch (method) {
+        case 'decrypt':
+            return cryptr.decrypt(str);
+        default:
+            return cryptr.encrypt(str);
+    }
 }
 
 
-export async function cardExistsVerify(id: number) {
+export async function activateCard(id: number, securityCode: string, rawPassword: string) {
+    const card = await cardExistsVerify(id)
+    activationVerify(card)
+    expirationVerify(card)
+    securityVerify(card, securityCode)
+    const password = passwordValidate(rawPassword)
+    await cardRepository.update(id, { password })
+}
+
+export async function cardExistsVerify(id: number): Promise<any> {
     const card = await cardRepository.findById(Number(id))
     if (!card) {
         throw { code: 'NotFound', message: 'No cards were found with given id' }
@@ -63,42 +76,75 @@ export async function cardExistsVerify(id: number) {
     return card;
 }
 
-export async function activationVerify(card:any) {
-        const expDate = dayjs(card.expirationDate, 'MM/YY');
-        if (expDate < dayjs()) {
-            throw { code: 'Conflict', message: 'Expired card can not be activated' }
-        }
-        if (card.password && card.password.length > 0) {
-            throw { code: 'Conflict', message: 'Card already activated' }
-        }
+function activationVerify(card: any) {
+    if (card.password && card.password.length > 0) {
+        throw { code: 'Conflict', message: 'Card already activated' }
+    }
+}
+
+function expirationVerify(card: any) {
+    const expDate = dayjs(card.expirationDate, 'MM/YY');
+    if (expDate < dayjs()) {
+        throw { code: 'Conflict', message: 'Expired card can not be activated' }
+    }
+}
+
+
+
+function securityVerify(card: any, securityCode: string) {
+    const decryptedCode = cryptString(card.securityCode, 'decrypt')
+    console.log(decryptedCode)
+    if (decryptedCode !== securityCode) {
+        throw { code: 'Unauthorized', message: 'Incorrect card id or security code' }
     }
 
-    export async function securityVerify(card:any, securityCode: string) {
-        const CRYPTR_KEY = process.env.CRYPTR_KEY || 'secret'
-        const cryptr = new Cryptr(CRYPTR_KEY)
-        const decryptedCode = cryptr.decrypt(card.securityCode)
-        console.log(decryptedCode)
-        if (decryptedCode !== securityCode) {
-            throw { code: 'Unauthorized', message: 'Incorrect id or security code' }
-        }
-    
 }
 
-export async function activateCard(id: number, securityCode: string, rawPassword: string) {
-    const card = await cardExistsVerify(id)
-    await activationVerify(card)
-    await securityVerify(card, securityCode)
-    const password = passwordVerify(rawPassword)
-    await cardRepository.update(id, { password })
-}
-
-function passwordVerify(str: string) {
-    const BCRYPT_SALT = process.env.BCRYPT_SALT || 10
+function passwordValidate(str: string): string {
     const regex = /^[0-9]{4}$/
     if (regex.test(str)) {
-        return bcrypt.hashSync(str, Number(BCRYPT_SALT))
+        return cryptString(str, 'encrypt')
     } else {
         throw { code: 'InvalidInput', message: 'Password must be 4 numbers' }
     }
 }
 
+export async function blockCard(cardId: number, password: string) {
+    const card = await cardExistsVerify(cardId)
+    expirationVerify(card)
+    blockVerify(card, 'block')
+    passwordVerify(card, password)
+    await cardRepository.update(cardId, { isBlocked: true })
+}
+
+export async function unblockCard(cardId: number, password: string) {
+    const card = await cardExistsVerify(cardId)
+    expirationVerify(card)
+    blockVerify(card, 'unblock')
+    passwordVerify(card, password)
+    await cardRepository.update(cardId, { isBlocked: false })
+}
+
+function blockVerify(card: any, method: string) {
+    switch (method) {
+        case 'unblock':
+            if (!card.isBlocked) {
+                throw { code: 'Conflict', message: 'Card is already unblocked' }
+            } else {
+                break
+            }
+        default:
+            if (card.isBlocked) {
+                throw { code: 'Conflict', message: 'Card is already blocked' }
+            } else {
+                break
+            }
+    }
+}
+
+function passwordVerify(card: any, password: string) {
+    const decryptPassword = cryptString(card.password, 'decrypt')
+    if (decryptPassword !== password) {
+        throw { code: 'Unauthorized', message: 'Incorrect card id or password' }
+    }
+}
