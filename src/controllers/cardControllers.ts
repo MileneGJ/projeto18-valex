@@ -8,6 +8,10 @@ export async function createCard (req:Request,res:Response) {
     await companyService.companyVerify(apiKey)
     const employee = await employeeService.employeeVerifyForNewCard(req.body.employeeId,req.body.cardType)
     await cardService.createNewCard(employee.id,employee.fullName,req.body.cardType)
-    
-    
+    res.sendStatus(200)    
+}
+
+export async function createPassword (req:Request, res:Response) {
+    await cardService.activateCard(req.body.id,req.body.securityCode,req.body.password)
+    res.sendStatus(200)
 }
