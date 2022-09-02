@@ -2,8 +2,8 @@ import joi from "joi";
 
 const activateCardSchema = joi.object({
     cardId:joi.number().required(),
-    CVC:joi.string().required(),
-    password:joi.string().required()
+    securityCode:joi.string().length(3).required(),
+    password:joi.string().length(4).required()
 })
 
 export default activateCardSchema

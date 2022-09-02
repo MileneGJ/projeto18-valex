@@ -12,6 +12,6 @@ export async function createCard (req:Request,res:Response) {
 }
 
 export async function createPassword (req:Request, res:Response) {
-    await cardService.activateCard(req.body.id,req.body.securityCode,req.body.password)
+    await cardService.activateCard(req.body.cardId,req.body.securityCode,req.body.password)
     res.sendStatus(200)
 }
