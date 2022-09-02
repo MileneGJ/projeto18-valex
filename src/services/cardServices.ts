@@ -55,12 +55,15 @@ function getEncryptedCode(): string {
 }
 
 
-export async function cardVerify(id: number, securityCode: string) {
+export async function cardExistsVerify(id: number) {
     const card = await cardRepository.findById(Number(id))
-    
     if (!card) {
         throw { code: 'NotFound', message: 'No cards were found with given id' }
     }
+    return card;
+}
+
+export async function activationVerify(card:any) {
         const expDate = dayjs(card.expirationDate, 'MM/YY');
         if (expDate < dayjs()) {
             throw { code: 'Conflict', message: 'Expired card can not be activated' }
@@ -68,6 +71,9 @@ export async function cardVerify(id: number, securityCode: string) {
         if (card.password && card.password.length > 0) {
             throw { code: 'Conflict', message: 'Card already activated' }
         }
+    }
+
+    export async function securityVerify(card:any, securityCode: string) {
         const CRYPTR_KEY = process.env.CRYPTR_KEY || 'secret'
         const cryptr = new Cryptr(CRYPTR_KEY)
         const decryptedCode = cryptr.decrypt(card.securityCode)
@@ -79,7 +85,9 @@ export async function cardVerify(id: number, securityCode: string) {
 }
 
 export async function activateCard(id: number, securityCode: string, rawPassword: string) {
-    await cardVerify(id, securityCode)
+    const card = await cardExistsVerify(id)
+    await activationVerify(card)
+    await securityVerify(card, securityCode)
     const password = passwordVerify(rawPassword)
     await cardRepository.update(id, { password })
 }
@@ -93,3 +101,4 @@ function passwordVerify(str: string) {
         throw { code: 'InvalidInput', message: 'Password must be 4 numbers' }
     }
 }
+

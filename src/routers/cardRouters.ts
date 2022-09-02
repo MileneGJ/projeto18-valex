@@ -9,5 +9,6 @@ const cardRouters = Router()
 
 cardRouters.post('/card',apiVerify,schemaValidation(newCardSchema),cardController.createCard)
 cardRouters.post('/card/activate',schemaValidation(activateCardSchema),cardController.createPassword)
+cardRouters.get('/balance/:cardId',cardController.getBalance)
 
 export default cardRouters
