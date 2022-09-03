@@ -21,3 +21,11 @@ function getSum(arr: Array<any>):number {
     }
     return sum
 }
+
+export async function addPurchase(cardId:number,amount:number,businessId:number) {
+    const {balance} = await getBalance(cardId)
+    if(balance<amount){
+        throw {code:'Conflict', message:'Not enough income to fulfill purchase'}
+    }
+    await paymentRepository.insert({cardId,businessId,amount})
+}

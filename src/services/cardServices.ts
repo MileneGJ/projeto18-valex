@@ -61,7 +61,7 @@ function cryptString(str: string, method: string): string {
 
 export async function activateCard(id: number, securityCode: string, rawPassword: string) {
     const card = await cardExistsVerify(id)
-    activationVerify(card)
+    activationVerify(card,'activate')
     expirationVerify(card)
     securityVerify(card, securityCode)
     const password = passwordValidate(rawPassword)
@@ -76,10 +76,18 @@ export async function cardExistsVerify(id: number): Promise<any> {
     return card;
 }
 
-function activationVerify(card: any) {
-    if (card.password && card.password.length > 0) {
-        throw { code: 'Conflict', message: 'Card already activated' }
+function activationVerify(card: any, action: string) {
+    switch (action) {
+        case 'activate':
+            if (card.password && card.password.length > 0) {
+                throw { code: 'Conflict', message: 'Card already activated' }
+            } else break
+        default:
+            if (!card.password || card.password.length === 0) {
+                throw { code: 'Conflict', message: 'Action not allowed for unactive card' }
+            } else break
     }
+
 }
 
 export function expirationVerify(card: any) {
@@ -125,18 +133,18 @@ export async function unblockCard(cardId: number, password: string) {
 
 function blockVerify(card: any, method: string) {
     switch (method) {
+        case 'checking':
+            if (card.isBlocked) {
+                throw { code: 'Conflict', message: 'Action not allowed for blocked card' }
+            } else break
         case 'unblock':
             if (!card.isBlocked) {
                 throw { code: 'Conflict', message: 'Card is already unblocked' }
-            } else {
-                break
-            }
+            } else break
         default:
             if (card.isBlocked) {
                 throw { code: 'Conflict', message: 'Card is already blocked' }
-            } else {
-                break
-            }
+            } else break
     }
 }
 
@@ -147,14 +155,12 @@ function passwordVerify(card: any, password: string) {
     }
 }
 
-export async function conditionsForTransactions(cardId:number){
+export async function conditionsForTransactions(cardId: number,type: string, password:string) {
     const card = await cardExistsVerify(Number(cardId))
-    activeCardVerify(card)
+    activationVerify(card,'checking')
     expirationVerify(card)
-}
-
-export function activeCardVerify(card:any) {
-    if(card.isBlocked||!card.password||card.password.length===0) {
-        throw { code: 'Conflict', message: 'Action not allowed for unactive card' }
+    if(type==='purchase'){
+        blockVerify(card,'checking')
+        passwordVerify(card,password)
     }
 }
