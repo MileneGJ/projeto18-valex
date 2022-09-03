@@ -82,14 +82,12 @@ function activationVerify(card: any) {
     }
 }
 
-function expirationVerify(card: any) {
+export function expirationVerify(card: any) {
     const expDate = dayjs(card.expirationDate, 'MM/YY');
     if (expDate < dayjs()) {
-        throw { code: 'Conflict', message: 'Expired card can not be activated' }
+        throw { code: 'Conflict', message: 'Action not allowed for expired card' }
     }
 }
-
-
 
 function securityVerify(card: any, securityCode: string) {
     const decryptedCode = cryptString(card.securityCode, 'decrypt')
@@ -146,5 +144,17 @@ function passwordVerify(card: any, password: string) {
     const decryptPassword = cryptString(card.password, 'decrypt')
     if (decryptPassword !== password) {
         throw { code: 'Unauthorized', message: 'Incorrect card id or password' }
+    }
+}
+
+export async function conditionsForTransactions(cardId:number){
+    const card = await cardExistsVerify(Number(cardId))
+    activeCardVerify(card)
+    expirationVerify(card)
+}
+
+export function activeCardVerify(card:any) {
+    if(card.isBlocked||!card.password||card.password.length===0) {
+        throw { code: 'Conflict', message: 'Action not allowed for unactive card' }
     }
 }
