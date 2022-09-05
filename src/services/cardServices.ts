@@ -61,7 +61,7 @@ function cryptString(str: string, method: string): string {
 
 export async function activateCard(id: number, securityCode: string, rawPassword: string) {
     const card = await cardExistsVerify(id)
-    activationVerify(card,'activate')
+    activationVerify(card, 'activate')
     expirationVerify(card)
     securityVerify(card, securityCode)
     const password = passwordValidate(rawPassword)
@@ -99,11 +99,9 @@ export function expirationVerify(card: any) {
 
 function securityVerify(card: any, securityCode: string) {
     const decryptedCode = cryptString(card.securityCode, 'decrypt')
-    console.log(decryptedCode)
     if (decryptedCode !== securityCode) {
-        throw { code: 'Unauthorized', message: 'Incorrect card id or security code' }
+        throw { code: 'Unauthorized', message: 'Incorrect card or security code' }
     }
-
 }
 
 function passwordValidate(str: string): string {
@@ -155,12 +153,29 @@ function passwordVerify(card: any, password: string) {
     }
 }
 
-export async function conditionsForTransactions(cardId: number,type: string, password:string) {
-    const card = await cardExistsVerify(Number(cardId))
-    activationVerify(card,'checking')
-    expirationVerify(card)
-    if(type==='purchase'){
-        blockVerify(card,'checking')
-        passwordVerify(card,password)
+async function cardDataVerify(card: any) {
+    const DBCard = await cardRepository.findByCardDetails(card.cardNumber, card.cardholderName, card.expirationDate)
+    if (!DBCard) {
+        throw { code: 'NotFound', message: 'No cards were found with given information' }
     }
+    securityVerify(DBCard,card.securityCode)
+    return DBCard
+}
+
+export async function conditionsForTransactions(reqCard: any, type: string) {
+    let DBCard
+    if (type === 'online purchase') {
+        DBCard = await cardDataVerify(reqCard)
+    } else {
+        DBCard = await cardExistsVerify(Number(reqCard.cardId))
+    }
+    activationVerify(DBCard, 'checking')
+    expirationVerify(DBCard)
+    if (type !== 'recharge') {
+        blockVerify(DBCard, 'checking')
+        if (type === 'POS purchase') {
+            passwordVerify(DBCard, reqCard.password)
+        }
+    }
+    return DBCard
 }

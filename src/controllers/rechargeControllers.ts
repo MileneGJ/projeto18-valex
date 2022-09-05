@@ -7,7 +7,7 @@ export async function newRecharge(req: Request, res: Response) {
     const { apiKey } = res.locals
     const { cardId } = req.params
     await companyService.companyVerify(apiKey)
-    await cardService.conditionsForTransactions(Number(cardId),'recharge','')
+    await cardService.conditionsForTransactions({cardId:Number(cardId)},'recharge')
     await rechargeService.addRecharge(Number(cardId), req.body.amount)
     res.sendStatus(200)
 }

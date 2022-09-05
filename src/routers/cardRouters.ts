@@ -8,7 +8,7 @@ import newCardSchema from "../schemas/newCardSchema";
 
 const cardRouters = Router()
 
-cardRouters.post('/newCard',apiVerify,schemaValidation(newCardSchema),cardController.createCard)
+cardRouters.post('/new-card',apiVerify,schemaValidation(newCardSchema),cardController.createCard)
 cardRouters.post('/card/activate/:cardId',schemaValidation(activateCardSchema),cardController.createPassword)
 cardRouters.get('/balance/:cardId',cardController.getBalance)
 cardRouters.post('/card/block/:cardId',schemaValidation(blockCardSchema),cardController.blockCard)
